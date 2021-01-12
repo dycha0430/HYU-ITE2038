@@ -95,16 +95,16 @@ void print_license( int license_part ) {
     char buffer[0x100];
 
     switch(license_part) {
-		case LICENSE_WARRANTEE:
-			start = LICENSE_WARRANTEE_START;
-			end = LICENSE_WARRANTEE_END;
-			break;
-		case LICENSE_CONDITIONS:
-        	start = LICENSE_CONDITIONS_START;
-        	end = LICENSE_CONDITIONS_END;
-			break;
-    	default:
-        	return;
+    case LICENSE_WARRANTEE:
+        start = LICENSE_WARRANTEE_START;
+        end = LICENSE_WARRANTEE_END;
+        break;
+    case LICENSE_CONDITIONS:
+        start = LICENSE_CONDITIONS_START;
+        end = LICENSE_CONDITIONS_END;
+        break;
+    default:
+        return;
     }
 
     fp = fopen(LICENSE_FILE, "r");
@@ -122,23 +122,23 @@ void print_license( int license_part ) {
 }
 
 /* Initialize index layer */
-int init_index(int num_buf){
-    return init_buf(num_buf);
+int init_index(int num_buf) {
+	return init_buf(num_buf);
 }
 
 /* Close data file using table id */
-int index_close_table(int table_id){
-    return buf_close_table(table_id);
+int index_close_table(int table_id) {
+	return buf_close_table(table_id);
 }
 
 /* Shutdown database */
-int index_shutdown_db(){
-    return buf_shutdown_db();
+int index_shutdown_db() {
+	return buf_shutdown_db();
 }
 
 /* Open data file using pathname */
-int index_open(char * pathname){
-    return buf_open_file(pathname);
+int index_open(char* pathname) {
+	return buf_open_file(pathname);
 }
 
 /* Find root page's page number */
@@ -147,8 +147,8 @@ pagenum_t find_root_pagenum(int table_id){
     header_page_t* header_page;
     header_page = (header_page_t*)malloc(sizeof(header_page_t));
     
-	// get a root page number from header page
     buf_read_page(table_id, HEADER_PAGENUM, (page_t*)header_page);
+    
     root_pagenum = header_page->root_pagenum;
     buf_write_page(table_id, HEADER_PAGENUM, NULL);
     
@@ -190,6 +190,7 @@ pagenum_t dequeue( void ) {
     return n->pagenum;
 }
 
+
 /* Utility function to give the length in edges
 * of the path from any node to the root.
 */
@@ -224,58 +225,55 @@ void print_tree( int table_id, pagenum_t root ) {
     bpt_page_t * n_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
     bpt_page_t * parent_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
 
+
     if (root == 0) {
         printf("Empty tree.\n");
         return;
     }
-
     queue = NULL;
     enqueue(root);
     while( queue != NULL ) {
         n = dequeue();
-		buf_read_page(table_id, n, (page_t*)n_page);
-		buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
-		buf_write_page(table_id, n, NULL);
-		buf_write_page(table_id, n_page->parent, NULL);
-
+	buf_read_page(table_id, n, (page_t*)n_page);
+	buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
+	buf_write_page(table_id, n, NULL);
+	buf_write_page(table_id, n_page->parent, NULL);
         if (n_page->parent != 0 && n == parent_page->special_pagenum) {
-			if (n == root) new_rank = 0;
-			else new_rank = path_to_root( table_id, root, n );
-
+	    if (n == root) new_rank = 0;
+	    else new_rank = path_to_root( table_id, root, n );
             if (new_rank != rank) {
                 rank = new_rank;
                 printf("\n");
             }
         }
-
         if (verbose_output) {
+
             printf("(%ld)", (unsigned long)n);
-		   if (!n_page->is_leaf)
-			printf("[%ld] ", (unsigned long)n_page->special_pagenum);
-		}
-
+	    if (!n_page->is_leaf)
+		printf("[%ld] ", (unsigned long)n_page->special_pagenum);
+	}
         for (i = 0; i < n_page->num_keys; i++) {
-			if (!n_page->is_leaf)
-					printf("%ld ", n_page->records.internal_records[i].key);
-				else
-					printf("%ld ", n_page->records.leaf_records[i].key);
+	    if (!n_page->is_leaf)
+                printf("%ld ", n_page->records.internal_records[i].key);
+            else
+                printf("%ld ", n_page->records.leaf_records[i].key);
 
-				if (verbose_output){
-			if (!n_page->is_leaf)
-						printf("[%ld] ", (unsigned long)n_page->records.internal_records[i].child_pagenum);
-			else 
-				printf("[%s] ", n_page->records.leaf_records[i].value);
-			}
-		}
-		if (!n_page->is_leaf){
-			enqueue(n_page->special_pagenum);
-			for (i = 0; i < n_page->num_keys; i++){
-				enqueue(n_page->records.internal_records[i].child_pagenum);
-			}
-		}
+            if (verbose_output){
+		if (!n_page->is_leaf)
+                    printf("[%ld] ", (unsigned long)n_page->records.internal_records[i].child_pagenum);
+		else 
+		    printf("[%s] ", n_page->records.leaf_records[i].value);
+	    }
+        }
+        if (!n_page->is_leaf){
+	    enqueue(n_page->special_pagenum);
+            for (i = 0; i < n_page->num_keys; i++){
+                enqueue(n_page->records.internal_records[i].child_pagenum);
+	    }
+	}
 
         printf("| ");
-	}
+    }
     printf("\n");
     free(n_page);
     free(parent_page);
@@ -287,15 +285,12 @@ void print_tree( int table_id, pagenum_t root ) {
 /* Find the matching key and modify the values */
 int update( int table_id, int64_t key, char* values, int trx_id){
     int i = 0, ret = 0;
-    lock_t **lock, *acquired_lock;
-	bpt_page_t* c;
-	pagenum_t leaf_pagenum;
-
+    lock_t** lock = (lock_t**)malloc(sizeof(lock_t*));
+    lock_t* acquired_lock;
     pagenum_t root = find_root_pagenum(table_id);
     if (root == 0) return -1;
-
-    c = (bpt_page_t*)malloc(sizeof(bpt_page_t));
-    leaf_pagenum = find_leaf(table_id, root, key, false, c);
+    bpt_page_t * c = (bpt_page_t*)malloc(sizeof(bpt_page_t));
+    pagenum_t leaf_pagenum = find_leaf( table_id, root, key, false, c);
 
 	// Find the matching key in the leaf page
     for (i = 0; i < c->num_keys; i++){
@@ -308,42 +303,37 @@ int update( int table_id, int64_t key, char* values, int trx_id){
         return -1;
     }
 
-	lock = (lock_t **)malloc(sizeof(lock_t*));
     ret = lock_acquire(table_id, key, trx_id, EXCLUSIVE, lock);
     
     acquired_lock = *lock;
 	// Need to wait until other trx release the lock
     if (ret == NEED_TO_WAIT){
-		// release page latch and wait
-		buf_write_page(table_id, leaf_pagenum, NULL);
-		lock_wait(acquired_lock);
+	// release page latch and wait
+	buf_write_page(table_id, leaf_pagenum, NULL);
+	lock_wait(acquired_lock);
 
-		// transaction latch is acquired
-		// acquire page latch
-		buf_read_page(table_id, leaf_pagenum, (page_t*)c);
-
+	// transaction latch is acquired
+	// acquire page latch
+	buf_read_page(table_id, leaf_pagenum, (page_t*)c);
 	// Deadlock detected
     } else if (ret == DEADLOCK){
-		// release page latch and return for trx abort
-		buf_write_page(table_id, leaf_pagenum, NULL);
+	// release page latch and return for trx abort
+	buf_write_page(table_id, leaf_pagenum, NULL);
 
-		free(c);
-		free(lock);
+	free(lock);
         return -1;
     }
 
 	// For rollback, save oldest value of this record that this trx modifies
     if (acquired_lock->old_val == NULL){
     	acquired_lock->old_val = (char*)malloc(sizeof(char)*VALUE_SIZE);
-		strcpy(acquired_lock->old_val, c->records.leaf_records[i].value);
+	strcpy(acquired_lock->old_val, c->records.leaf_records[i].value);
     }
     
 	// Modify the values
     strcpy(c->records.leaf_records[i].value, values);
     buf_write_page(table_id, leaf_pagenum, (page_t*)c);
-	
-	free(lock);
-	free(c);
+
     return 0;
 }
 
@@ -386,11 +376,11 @@ pagenum_t find_leaf( int table_id, pagenum_t root, int64_t key, bool verbose, bp
 
         if (verbose)
             printf("%d ->\n", i);
-		buf_write_page(table_id, next_pagenum, NULL);
+	buf_write_page(table_id, next_pagenum, NULL);
 
-		if (i == 0) next_pagenum = c->special_pagenum;
-		else next_pagenum = c->records.internal_records[i-1].child_pagenum;
-		buf_read_page(table_id, next_pagenum, (page_t*)c);
+	if (i == 0) next_pagenum = c->special_pagenum;
+	else next_pagenum = c->records.internal_records[i-1].child_pagenum;
+	buf_read_page(table_id, next_pagenum, (page_t*)c);
     }
  
     if (verbose) {
@@ -408,17 +398,12 @@ pagenum_t find_leaf( int table_id, pagenum_t root, int64_t key, bool verbose, bp
  */
 char * find( int table_id, int64_t key, bool verbose, int trx_id ) {
     pagenum_t root;
-    int i = 0, ret = -1;
-	char* ret_val;
-	lock_t** lock;
-	bpt_page_t* c;
-
+    int i = 0, ret;
+    char * ret_val = (char*)malloc(sizeof(char)*(VALUE_SIZE+1));
+    lock_t** lock = (lock_t**)malloc(sizeof(lock_t*));
     root = find_root_pagenum(table_id);
     if (root == 0) return NULL;
-	ret_val = (char*)malloc(sizeof(char) * (VALUE_SIZE + 1));
-	lock = (lock_t **)malloc(sizeof(lock_t*));
-    c = (bpt_page_t*)malloc(sizeof(bpt_page_t));
-
+    bpt_page_t * c = (bpt_page_t*)malloc(sizeof(bpt_page_t));
     pagenum_t leaf_pagenum = find_leaf( table_id, root, key, verbose, c );
     
 	// Find the matching key
@@ -428,26 +413,26 @@ char * find( int table_id, int64_t key, bool verbose, int trx_id ) {
 
 	// There is no matching key
     if (i == c->num_keys){
-		buf_write_page(table_id, leaf_pagenum, NULL);
+	buf_write_page(table_id, leaf_pagenum, NULL);
     	free(c);
-		return NULL;
+	return NULL;
     }
 
     if (trx_id != 0){
     	ret = lock_acquire(table_id, key, trx_id, SHARED, lock); 
-		// Need to wait until other trx release the lock
-		if (ret == NEED_TO_WAIT){
-			buf_write_page(table_id, leaf_pagenum, NULL);
-			lock_wait(*lock);
+	// Need to wait until other trx release the lock
+	if (ret == NEED_TO_WAIT){
+            buf_write_page(table_id, leaf_pagenum, NULL);
+            lock_wait(*lock);
 
-			// transaction latch is acquired
-			buf_read_page(table_id, leaf_pagenum, (page_t*)c);
+            // transaction latch is acquired
+            buf_read_page(table_id, leaf_pagenum, (page_t*)c);
 		// Deadlock detected
-		} else if (ret == DEADLOCK){
-			buf_write_page(table_id, leaf_pagenum, NULL);
+        } else if (ret == DEADLOCK){
+            buf_write_page(table_id, leaf_pagenum, NULL);
 
-			return NULL;
-		}
+            return NULL;
+        }
     }
 
 	// Read the found value
@@ -530,7 +515,7 @@ void insert_into_leaf( int table_id, int64_t key, char * value, pagenum_t leaf_p
     bpt_page_t* leaf_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
     insertion_point = 0;
     buf_read_page(table_id, leaf_pagenum, (page_t*)leaf_page);
-	
+
 	// Find insertion point
     while (insertion_point < leaf_page->num_keys && leaf_page->records.leaf_records[insertion_point].key < key)
         insertion_point++;
@@ -747,8 +732,8 @@ pagenum_t insert_into_node_after_splitting(int table_id, pagenum_t root, pagenum
     for (i = 0; i < new_page->num_keys; i++) {
         child = new_page->records.internal_records[i].child_pagenum;
         buf_read_page(table_id, child, (page_t*)child_page);
-		child_page->parent = new_pagenum;
-		buf_write_page(table_id, child, (page_t*)child_page);
+	child_page->parent = new_pagenum;
+	buf_write_page(table_id, child, (page_t*)child_page);
     }
 
     child = new_page->special_pagenum;
@@ -765,6 +750,7 @@ pagenum_t insert_into_node_after_splitting(int table_id, pagenum_t root, pagenum
 	 * pagess resulting from the split, with
 	 * the old page to the left and the new to the right.
 	 */
+
     ret = insert_into_parent(table_id, root, old_pagenum, k_prime, new_pagenum);
 
     return ret;
@@ -798,8 +784,9 @@ pagenum_t insert_into_parent(int table_id, pagenum_t root, pagenum_t left, int64
     buf_read_page(table_id, parent, (page_t*)parent_page);
 
 	/* Find the parent's index to the left
-	  * page.
-	  */
+	 * page.
+	 */
+
     left_index = get_left_index(parent_page, left);
     buf_write_page(table_id, parent, NULL);
 
@@ -811,11 +798,10 @@ pagenum_t insert_into_parent(int table_id, pagenum_t root, pagenum_t left, int64
 
     if (num_keys < INTERNAL_ORDER - 1)
         return insert_into_node(table_id, root, parent, left_index, key, right);
-	
+    
 	/* Harder case:  split a page in order
 	 * to preserve the B+ tree properties.
 	 */
-	
 	return insert_into_node_after_splitting(table_id, root, parent, left_index, key, right);
 
 }
@@ -925,10 +911,10 @@ pagenum_t insert( int table_id, pagenum_t root, int64_t key, char * value ) {
 	 */
     if (num_keys < LEAF_ORDER - 1) {
         insert_into_leaf(table_id, key, value, leaf_pagenum);
+	/* Case:  leaf must be split.
+	*/
     } else {
-		/* Case:  leaf must be split.
-		*/
-		insert_into_leaf_after_splitting(table_id, root, leaf_pagenum, key, value);
+	insert_into_leaf_after_splitting(table_id, root, leaf_pagenum, key, value);
     }
 
     return 0;
@@ -945,6 +931,7 @@ pagenum_t insert( int table_id, pagenum_t root, int64_t key, char * value ) {
  * is the leftmost child), returns -2 to signify
  * this special case.
  */
+
 int get_neighbor_index( pagenum_t n, bpt_page_t* parent_page ) {
 
     int i;
@@ -969,14 +956,14 @@ pagenum_t remove_entry_from_node(pagenum_t n, bpt_page_t* n_page, int64_t key) {
 	
     	for (++i; i < n_page->num_keys; i++){
        	    n_page->records.leaf_records[i-1].key = n_page->records.leaf_records[i].key;
-		    strcpy(n_page->records.leaf_records[i-1].value, n_page->records.leaf_records[i].value);
-		}
+	    strcpy(n_page->records.leaf_records[i-1].value, n_page->records.leaf_records[i].value);
+	}
     } else {
     	while (n_page->records.internal_records[i].key != key) i++;
-		for (++i; i < n_page->num_keys; i++){
-			n_page->records.internal_records[i-1].key = n_page->records.internal_records[i].key;
-			n_page->records.internal_records[i-1].child_pagenum = n_page->records.internal_records[i].child_pagenum;
-		}
+	for (++i; i < n_page->num_keys; i++){
+	    n_page->records.internal_records[i-1].key = n_page->records.internal_records[i].key;
+	    n_page->records.internal_records[i-1].child_pagenum = n_page->records.internal_records[i].child_pagenum;
+	}
     }
 
 	// One key fewer.
@@ -990,40 +977,39 @@ pagenum_t remove_entry_from_node(pagenum_t n, bpt_page_t* n_page, int64_t key) {
     return n;
 }
 
-
-pagenum_t adjust_root(int table_id, pagenum_t root) {
-
-    pagenum_t new_root;
-    bpt_page_t* new_root_page, *root_page;
-	header_page_t* header_page;
-
-	/* Case: nonempty root.
+/* Case: nonempty root.
 	 * Key and pointer have already been deleted,
 	 * so nothing to be done.
 	 */
+pagenum_t adjust_root(int table_id, pagenum_t root) {
 
-	root_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
+    pagenum_t new_root;
+    bpt_page_t* new_root_page;
+    header_page_t* header_page = (header_page_t*)malloc(sizeof(header_page_t));
+    bpt_page_t* root_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
+
     buf_read_page(table_id, root, (page_t*)root_page);
     if (root_page->num_keys > 0){
-		buf_write_page(table_id, root, NULL);
-		free(root_page);
+	buf_write_page(table_id, root, NULL);
+	free(root_page);
+	free(header_page);
         return root;
     }
 
 	/* Case: empty root.
 	 */
 
-	// If it has a child, promote 
-	// the first (only) child
-	// as the new root.
+	 // If it has a child, promote 
+	 // the first (only) child
+	 // as the new root.
 
     if (!root_page->is_leaf) {
         bpt_page_t* new_root_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
-		new_root = root_page->special_pagenum;
+	new_root = root_page->special_pagenum;
         buf_read_page(table_id, new_root, (page_t*)new_root_page);
         new_root_page->parent = 0;
-		buf_write_page(table_id, new_root, (page_t*)new_root_page);
-		free(new_root_page);
+	buf_write_page(table_id, new_root, (page_t*)new_root_page);
+	free(new_root_page);
     }
 
 	// If it is a leaf (has no children),
@@ -1034,7 +1020,6 @@ pagenum_t adjust_root(int table_id, pagenum_t root) {
     }
 
 	// Modify the root page info in header page
-	header_page = (header_page_t*)malloc(sizeof(header_page_t));
     buf_read_page(table_id, HEADER_PAGENUM, (page_t*)header_page);
     header_page->root_pagenum = new_root;
     buf_write_page(table_id, HEADER_PAGENUM, (page_t*)header_page);
@@ -1065,9 +1050,9 @@ pagenum_t coalesce_nodes(int table_id, pagenum_t root, pagenum_t n, pagenum_t ne
 	 */
 
     if (neighbor_index == -2) {
-		tmp = n;
-		n = neighbor;
-		neighbor = tmp;
+	tmp = n;
+	n = neighbor;
+	neighbor = tmp;
     }
 
     buf_read_page(table_id, n, (page_t*)n_page);
@@ -1089,11 +1074,10 @@ pagenum_t coalesce_nodes(int table_id, pagenum_t root, pagenum_t n, pagenum_t ne
 	 */
 
     if (!n_page->is_leaf) {
-
 		// Append k_prime.
         neighbor_page->records.internal_records[neighbor_insertion_index].key = k_prime;
         neighbor_page->records.internal_records[neighbor_insertion_index].child_pagenum = n_page->special_pagenum;
-		neighbor_page->num_keys++;
+	neighbor_page->num_keys++;
 	
 
         n_end = n_page->num_keys;
@@ -1107,14 +1091,14 @@ pagenum_t coalesce_nodes(int table_id, pagenum_t root, pagenum_t n, pagenum_t ne
 
 		/* All children must now point up to the same parent.
 		 */
-		tmp_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
+	tmp_page = (bpt_page_t*)malloc(sizeof(bpt_page_t));
         for (i = 0; i < neighbor_page->num_keys; i++) {
             tmp = neighbor_page->records.internal_records[i].child_pagenum;
-			buf_read_page(table_id, tmp, (page_t*)tmp_page);
-			tmp_page->parent = neighbor;
+	    buf_read_page(table_id, tmp, (page_t*)tmp_page);
+	    tmp_page->parent = neighbor;
             buf_write_page(table_id, tmp, (page_t*)tmp_page);
         }
-		free(tmp_page);
+	free(tmp_page);
     }
 
 	/* In a leaf, append the keys and values of
@@ -1125,7 +1109,8 @@ pagenum_t coalesce_nodes(int table_id, pagenum_t root, pagenum_t n, pagenum_t ne
         for (i = neighbor_insertion_index, j = 0; j < n_page->num_keys; i++, j++) {
             neighbor_page->records.leaf_records[i].key = n_page->records.leaf_records[i].key;
             strcpy(neighbor_page->records.leaf_records[i].value, n_page->records.leaf_records[j].value);
-            neighbor_page->num_keys++;
+            
+	    neighbor_page->num_keys++;
         }
         neighbor_page->special_pagenum = n_page->special_pagenum;
     }
@@ -1142,7 +1127,7 @@ pagenum_t coalesce_nodes(int table_id, pagenum_t root, pagenum_t n, pagenum_t ne
 }
 
 /* Redistributes entries between two pages when
- * one has become 
+ * one has become
  * too small after deletion
  * but its neighbor is too big to append the
  * small page's entries without exceeding the
@@ -1159,43 +1144,42 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, pagenum_t n, pagenum_
 
     buf_read_page(table_id, n, (page_t*)n_page);
     buf_read_page(table_id, neighbor, (page_t*)neighbor_page);
-	
+
 	/* Case: n has a neighbor to the left.
 	 * Pull the neighbor's last key-value pair over
 	 * from the neighbor's right end to n's left end.
 	 */
-
     if (neighbor_index != -2) {
         for (i = n_page->num_keys; i > 0; i--) {
-			if (n_page->is_leaf){
-				n_page->records.leaf_records[i].key = n_page->records.leaf_records[i - 1].key;
-				strcpy(n_page->records.leaf_records[i].value, n_page->records.leaf_records[i - 1].value);
-			} else {
-				n_page->records.internal_records[i].key = n_page->records.internal_records[i - 1].key;
-				n_page->records.internal_records[i].child_pagenum = n_page->records.internal_records[i - 1].child_pagenum;
-			}
+	    if (n_page->is_leaf){
+                n_page->records.leaf_records[i].key = n_page->records.leaf_records[i - 1].key;
+                strcpy(n_page->records.leaf_records[i].value, n_page->records.leaf_records[i - 1].value);
+	    } else {
+	        n_page->records.internal_records[i].key = n_page->records.internal_records[i - 1].key;
+		n_page->records.internal_records[i].child_pagenum = n_page->records.internal_records[i - 1].child_pagenum;
+	    }
         }
 
         if (!n_page->is_leaf) {
-			n_page->records.internal_records[0].child_pagenum = n_page->special_pagenum;
+	    n_page->records.internal_records[0].child_pagenum = n_page->special_pagenum;
             n_page->special_pagenum = neighbor_page->records.internal_records[neighbor_page->num_keys-1].child_pagenum;
             tmp = n_page->special_pagenum;
 	    
-			buf_read_page(table_id, tmp, (page_t*)tmp_page);
+	    buf_read_page(table_id, tmp, (page_t*)tmp_page);
             tmp_page->parent = n;
-			buf_write_page(table_id, tmp, (page_t*)tmp_page);
+	    buf_write_page(table_id, tmp, (page_t*)tmp_page);
 
             n_page->records.internal_records[0].key = k_prime;
-			buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
+	    buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
             parent_page->records.internal_records[k_prime_index].key = neighbor_page->records.internal_records[neighbor_page->num_keys - 1].key;
-			buf_write_page(table_id, n_page->parent, (page_t*)parent_page);
+	    buf_write_page(table_id, n_page->parent, (page_t*)parent_page);
         }
         else {
             strcpy(n_page->records.leaf_records[0].value, neighbor_page->records.leaf_records[neighbor_page->num_keys - 1].value);
             neighbor_page->records.leaf_records[neighbor_page->num_keys - 1].value[0] = '\0';
             n_page->records.leaf_records[0].key = neighbor_page->records.leaf_records[neighbor_page->num_keys - 1].key;
             
-			buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
+	    buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
             parent_page->records.leaf_records[k_prime_index].key = n_page->records.leaf_records[0].key;
             buf_write_page(table_id, n_page->parent, (page_t*)parent_page);
         }
@@ -1212,32 +1196,32 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, pagenum_t n, pagenum_
             n_page->records.leaf_records[n_page->num_keys].key = neighbor_page->records.leaf_records[0].key;
             strcpy(n_page->records.leaf_records[n_page->num_keys].value, neighbor_page->records.leaf_records[0].value);
             buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
-			parent_page->records.internal_records[k_prime_index].key = neighbor_page->records.leaf_records[1].key;
-			buf_write_page(table_id, n_page->parent, NULL);
+	    parent_page->records.internal_records[k_prime_index].key = neighbor_page->records.leaf_records[1].key;
+	    buf_write_page(table_id, n_page->parent, NULL);
         
-			for (i = 0; i < neighbor_page->num_keys - 1; i++) {
+	    for (i = 0; i < neighbor_page->num_keys - 1; i++) {
                 neighbor_page->records.leaf_records[i].key = neighbor_page->records.leaf_records[i + 1].key;
                 strcpy(neighbor_page->records.leaf_records[i].value, neighbor_page->records.leaf_records[i + 1].value);
             }
-		}
+	}
         else {
             n_page->records.internal_records[n_page->num_keys].key = k_prime;
             n_page->records.internal_records[n_page->num_keys].child_pagenum = neighbor_page->special_pagenum;
             tmp = n_page->records.internal_records[n_page->num_keys].child_pagenum;
             buf_read_page(table_id, tmp, (page_t*)tmp_page);
-			tmp_page->parent = n;
-			buf_write_page(table_id, tmp, (page_t*)tmp_page);
+	    tmp_page->parent = n;
+	    buf_write_page(table_id, tmp, (page_t*)tmp_page);
 
-			buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
+	    buf_read_page(table_id, n_page->parent, (page_t*)parent_page);
             parent_page->records.internal_records[k_prime_index].key = neighbor_page->records.internal_records[0].key;
-			buf_write_page(table_id, n_page->parent, (page_t*)parent_page);
+	    buf_write_page(table_id, n_page->parent, (page_t*)parent_page);
 
-			neighbor_page->special_pagenum = neighbor_page->records.internal_records[0].child_pagenum;
+	    neighbor_page->special_pagenum = neighbor_page->records.internal_records[0].child_pagenum;
 
-			for (i = 0; i < neighbor_page->num_keys - 1; i++) {
-					neighbor_page->records.internal_records[i].key = neighbor_page->records.internal_records[i + 1].key;
-					neighbor_page->records.internal_records[i].child_pagenum = neighbor_page->records.internal_records[i + 1].child_pagenum;
-			}
+	    for (i = 0; i < neighbor_page->num_keys - 1; i++) {
+                neighbor_page->records.internal_records[i].key = neighbor_page->records.internal_records[i + 1].key;
+                neighbor_page->records.internal_records[i].child_pagenum = neighbor_page->records.internal_records[i + 1].child_pagenum;
+            }
         }
     }
 
@@ -1280,11 +1264,10 @@ pagenum_t delete_entry( int table_id, pagenum_t root, pagenum_t n, int64_t key )
 
 	/* Case:  deletion from the root.
 	 */
-
     if (n == root){ 
-		free(n_page);
+	free(n_page);
         ret = adjust_root(table_id, root);
-		return ret;
+	return ret;
     }
 
 	/* Case:  deletion from a page below the root.
@@ -1296,7 +1279,7 @@ pagenum_t delete_entry( int table_id, pagenum_t root, pagenum_t n, int64_t key )
 	  */
 
     if (n_page->num_keys >= MIN_KEYS){
-		free(n_page);
+	free(n_page);
         return root;
     }
     
@@ -1323,7 +1306,7 @@ pagenum_t delete_entry( int table_id, pagenum_t root, pagenum_t n, int64_t key )
     if (neighbor_index == -2)
         neighbor = parent_page->records.internal_records[0].child_pagenum;
 	// neighbor is the leftmost child
-    else if (neighbor_index == -1)
+	else if (neighbor_index == -1)
         neighbor = parent_page->special_pagenum;
     else
 	neighbor = parent_page->records.internal_records[neighbor_index].child_pagenum;
@@ -1335,7 +1318,6 @@ pagenum_t delete_entry( int table_id, pagenum_t root, pagenum_t n, int64_t key )
 
     buf_write_page(table_id, n_page->parent, NULL);
     buf_write_page(table_id, neighbor, NULL);
-
     /* Coalescence. */
 
     if (neighbor_page->num_keys + n_page->num_keys < capacity){
