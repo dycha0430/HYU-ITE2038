@@ -54,7 +54,8 @@ int db_update(int table_id, int64_t key, char* values, int trx_id){
 /* Read a value in the table with matching key for the transaction having trx_id.
  * If found matching ¡®key¡¯, store matched ¡®value¡¯ 
  * string in ret_val and return 0. Otherwise, 
- * return non-zero value and transaction is aborted. */
+ * return non-zero value and transaction is aborted.
+ */
 
 int db_find (int table_id, int64_t key, char *ret_val, int trx_id){
     char * find_val = NULL;
