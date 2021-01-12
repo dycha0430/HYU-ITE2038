@@ -13,12 +13,12 @@ int init_buf (int buf_num){
     tail = buf_num+1;
     for (int i = 0; i < buf_num+2; i++){
     	buf_pool[i].frame = (page_t*)malloc(sizeof(page_t));
-		buf_pool[i].table_id = -1;
-		buf_pool[i].page_num = -1;
-		buf_pool[i].is_dirty = 0;
-		buf_pool[i].page_latch = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-		buf_pool[i].next = NULL;
-		buf_pool[i].prev = NULL;
+	buf_pool[i].table_id = -1;
+	buf_pool[i].page_num = -1;
+	buf_pool[i].is_dirty = 0;
+	buf_pool[i].page_latch = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+	buf_pool[i].next = NULL;
+	buf_pool[i].prev = NULL;
     }
     
     buf_pool[header].next = &buf_pool[tail];
@@ -34,12 +34,12 @@ int buf_open_file(char* pathname){
     pthread_mutex_lock(&buf_mgr_latch);
     int ret = 0, table_id;
 
-	/* If the pathname has been opened more than once, 
-	 * return the same table id as before. 
+	/* If the pathname has been opened more than once,
+	 * return the same table id as before.
 	 */
     for (int i = 0; i < open_table_num; i++) {
         if (!strcmp(table_info[i].pathname, pathname)){
-			if (table_info[i].table_fd != -1) return i+1;
+	    if (table_info[i].table_fd != -1) return i+1;
             table_info[i].table_fd = open_file(pathname);
             return i;
         }
@@ -67,7 +67,6 @@ int buf_open_file(char* pathname){
     pthread_mutex_unlock(&buf_mgr_latch);
     return table_id;
 }
-
 /* Allocate a page to disk and load into the buffer */
 pagenum_t buf_alloc_page(int table_id){
     pagenum_t new_pagenum;
@@ -123,7 +122,7 @@ void buf_free_page(int table_id, pagenum_t pagenum){
 
 }
 
-/* Load a page to buffer. 
+/* Load a page to buffer.
  * Whenever a page is loaded, the page is linked to the head
  * of the buffer pool linked list to follow the LRU policy.
  */
@@ -135,21 +134,21 @@ void buf_read_page(int table_id, pagenum_t pagenum, page_t* dest){
     buf_block = buf_pool[header].next;
     
     while(buf_block->next != NULL){
-		/* Case: the page already exists in buffer */
-		if (buf_block->table_id == table_id && buf_block->page_num == pagenum){
-			pthread_mutex_lock(&buf_block->page_latch);
-			memcpy(dest->data, buf_block->frame->data, PAGE_SIZE);
-			buf_block->next->prev = buf_block->prev;
-			buf_block->prev->next = buf_block->next;
-			buf_block->next = buf_pool[header].next;
-			buf_block->next->prev = buf_block;
-			buf_block->prev = &buf_pool[header];
-			buf_pool[header].next = buf_block;
-			pthread_mutex_unlock(&buf_mgr_latch);
+	/* Case: the page already exists in buffer */
+	if (buf_block->table_id == table_id && buf_block->page_num == pagenum){
+	    pthread_mutex_lock(&buf_block->page_latch);
+	    memcpy(dest->data, buf_block->frame->data, PAGE_SIZE);
+	    buf_block->next->prev = buf_block->prev;
+	    buf_block->prev->next = buf_block->next;
+	    buf_block->next = buf_pool[header].next;
+	    buf_block->next->prev = buf_block;
+	    buf_block->prev = &buf_pool[header];
+	    buf_pool[header].next = buf_block;
+	    pthread_mutex_unlock(&buf_mgr_latch);
 	    
-			return;
-		}
-		buf_block = buf_block->next;
+	    return;
+	}
+	buf_block = buf_block->next;
     }
 
 	/* Case: the page does not exist yet in buffer pool.
@@ -161,41 +160,40 @@ void buf_read_page(int table_id, pagenum_t pagenum, page_t* dest){
 	/* Case: the empty frame exists. */
 
     file_read_page(pagenum, dest);
-    // Find the empty frame.
+	// Find the empty frame.
     for (int i = 1; i <= buf_frame_num; i++){
-		if (buf_pool[i].page_num == -1){
-			pthread_mutex_lock(&buf_pool[i].page_latch);
-			memcpy(buf_pool[i].frame->data, dest->data, PAGE_SIZE);
-			buf_pool[i].table_id = table_id;
-			buf_pool[i].page_num = pagenum;
-			buf_pool[i].is_dirty = 0;
-			buf_pool[i].next = buf_pool[header].next;
-			buf_pool[i].next->prev = &buf_pool[i];
-			buf_pool[i].prev = &buf_pool[header];
-			buf_pool[header].next = &buf_pool[i];
+	if (buf_pool[i].page_num == -1){
+            pthread_mutex_lock(&buf_pool[i].page_latch);
+	    memcpy(buf_pool[i].frame->data, dest->data, PAGE_SIZE);
+	    buf_pool[i].table_id = table_id;
+	    buf_pool[i].page_num = pagenum;
+	    buf_pool[i].is_dirty = 0;
+	    buf_pool[i].next = buf_pool[header].next;
+	    buf_pool[i].next->prev = &buf_pool[i];
+	    buf_pool[i].prev = &buf_pool[header];
+	    buf_pool[header].next = &buf_pool[i];
 	    
-			pthread_mutex_unlock(&buf_mgr_latch);
-			return;
-		}
+	    pthread_mutex_unlock(&buf_mgr_latch);
+	    return;
+	}
     }
 
 	/* Case: empty frame does not exist.
 	 * Frame replacement is needed.
 	 * According to LRU policy, replaces the least recently used page, ie the tail side.
 	 */
-    
+
     buf_block = buf_pool[tail].prev;
-	
     pthread_mutex_lock(&buf_block->page_latch); // buffer block page's latch is used as a pin. 
     
 	// If the page to be replaced is dirty, flush the page.
+    
     if (buf_block->is_dirty){
-		int tmp = fd;
-		fd = table_info[buf_block->table_id].table_fd;
-		file_write_page(buf_block->page_num, buf_block->frame);
-		fd = tmp;
+	int tmp = fd;
+	fd = table_info[buf_block->table_id].table_fd;
+	file_write_page(buf_block->page_num, buf_block->frame);
+	fd = tmp;
     }
-
     memcpy(buf_block->frame->data, dest->data, PAGE_SIZE);
     buf_block->table_id = table_id;
     buf_block->page_num = pagenum;
@@ -222,7 +220,7 @@ void buf_write_page(int table_id, pagenum_t pagenum, const page_t* src){
 	    	buf_block->is_dirty = 1; // Set dirty bit.
 	    }
 	   
-	    pthread_mutex_unlock(&buf_block->page_latch); // Unlock the page latch.
+	    pthread_mutex_unlock(&buf_block->page_latch);  // Unlock the page latch.
 	    break;
 	}
 
@@ -231,7 +229,8 @@ void buf_write_page(int table_id, pagenum_t pagenum, const page_t* src){
     return;
 }
 
-/* Flush all pages belonging to table_id and remove from buffer. 
+
+/* Flush all pages belonging to table_id and remove from buffer.
  * Close the data file.
  */
 int buf_close_table(int table_id){
@@ -242,20 +241,21 @@ int buf_close_table(int table_id){
     fd = table_info[table_id].table_fd;
 
     while(buf_block->next != NULL){
-		temp_block = buf_block->next;
+	temp_block = buf_block->next;
     	if (buf_block->table_id == table_id){
-			pthread_mutex_lock(&buf_block->page_latch);
-			if (buf_block->is_dirty) file_write_page(buf_block->page_num, buf_block->frame);
+	    pthread_mutex_lock(&buf_block->page_latch);
+	    if (buf_block->is_dirty)
+	    	file_write_page(buf_block->page_num, buf_block->frame);
             buf_block->table_id = -1;
             buf_block->page_num = -1;
             buf_block->is_dirty = 0;
-			buf_block->next->prev = buf_block->prev;
-			buf_block->prev->next = buf_block->next;
+	    buf_block->next->prev = buf_block->prev;
+	    buf_block->prev->next = buf_block->next;
             buf_block->next = NULL;
             buf_block->prev = NULL;
-			pthread_mutex_unlock(&buf_block->page_latch);
-		}
-		buf_block = temp_block;
+	    pthread_mutex_unlock(&buf_block->page_latch);
+	}
+	buf_block = temp_block;
     }
 
     close_file();
@@ -266,24 +266,24 @@ int buf_close_table(int table_id){
 }
 
 /* Flush all pages and destroy the buffer.
- * Close all data files.  
+ * Close all data files.
  */
 int buf_shutdown_db(){
     pthread_mutex_lock(&buf_mgr_latch);
     buf_block_t* buf_block;
     buf_block = &buf_pool[header];
     while(buf_block->next != NULL){
-		pthread_mutex_lock(&buf_block->page_latch);
+	pthread_mutex_lock(&buf_block->page_latch);
         if (buf_block->is_dirty){
-			fd = table_info[buf_block->table_id].table_fd;
+	    fd = table_info[buf_block->table_id].table_fd;
             file_write_page(buf_block->page_num, buf_block->frame);
-		}
+	}
 
         free(buf_block->frame);
-		pthread_mutex_unlock(&buf_block->page_latch);
-		pthread_mutex_destroy(&buf_block->page_latch);
+	pthread_mutex_unlock(&buf_block->page_latch);
+	pthread_mutex_destroy(&buf_block->page_latch);
 
-		buf_block = buf_block->next;
+	buf_block = buf_block->next;
     }
     
     free(buf_pool);
@@ -291,10 +291,10 @@ int buf_shutdown_db(){
 
     for (int i = 0; i < open_table_num; i++){
     	if (table_info[i].table_fd != -1){
-			fd = table_info[i].table_fd;
-			close_file();
-			table_info[i].table_fd = -1;
-		}
+	    fd = table_info[i].table_fd;
+	    close_file();
+	    table_info[i].table_fd = -1;
+	}
     }
     pthread_mutex_unlock(&buf_mgr_latch);
 

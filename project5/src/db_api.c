@@ -6,9 +6,10 @@ int init_db (int buf_num, int flag, int log_num, char* log_path, char* logmsg_pa
     init_trx_table();
     return init_index(buf_num);
 }
-/* Open existing data file using ¡®pathname¡¯ 
- * or create one if not existed 
- * If success, return the unique table id, 
+
+/* Open existing data file using ¡®pathname¡¯
+ * or create one if not existed
+ * If success, return the unique table id,
  * which represents the own table in this database.
  * Otherwise, return negative value.
  */
@@ -16,7 +17,7 @@ int open_table (char *pathname){
     return index_open(pathname);
 }
 
-/* Insert input ¡®key/value¡¯ (record) to data file at the right place. 
+/* Insert input ¡®key/value¡¯ (record) to data file at the right place.
  * If success, return 0. Otherwise, return non-zero value.
  */
 int db_insert (int table_id, int64_t key, char *value){
@@ -27,8 +28,8 @@ int db_insert (int table_id, int64_t key, char *value){
     return 0;
 }
 
-/* Find the matching key and modify the values. 
- * If operation is successfully done, return 0. 
+/* Find the matching key and modify the values.
+ * If operation is successfully done, return 0.
  * Otherwise, return non-zero value and transaction is aborted.
  */
 int db_update(int table_id, int64_t key, char* values, int trx_id){
@@ -46,14 +47,14 @@ int db_update(int table_id, int64_t key, char* values, int trx_id){
 
     if (ret != 0) {
     	trx_abort(trx_id);
-		return -1;
+	return -1;
     }
     return 0;
 }
 
 /* Read a value in the table with matching key for the transaction having trx_id.
- * If found matching ¡®key¡¯, store matched ¡®value¡¯ 
- * string in ret_val and return 0. Otherwise, 
+ * If found matching ¡®key¡¯, store matched ¡®value¡¯
+ * string in ret_val and return 0. Otherwise,
  * return non-zero value and transaction is aborted.
  */
 
@@ -70,17 +71,17 @@ int db_find (int table_id, int64_t key, char *ret_val, int trx_id){
    
     // FAILED
     if (find_val == NULL) {
-		trx_abort(trx_id);
-		return -1;
+	trx_abort(trx_id);
+	return -1;
     }
-    // SUCCESS
+    //SUCCESS
     else strcpy(ret_val, find_val);
 
     return 0;
 }
 
 /* Find the matching record and delete it if found.
- * If success, return 0. Otherwise, return non-zero value 
+ * If success, return 0. Otherwise, return non-zero value
  */
 
 int db_delete (int table_id, int64_t key){
@@ -96,7 +97,6 @@ int db_delete (int table_id, int64_t key){
 int close_table(int table_id){
     return index_close_table(table_id);
 }
-
 
 /* Flush all data from buffer and destroy allocated buffer.
  * If success, return 0. Otherwise, return non-zero value.

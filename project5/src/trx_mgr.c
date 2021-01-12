@@ -19,7 +19,7 @@ int trx_begin(void){
     trx->trx_id = ++global_trx_id;
     if (trx->trx_id < 0){
     	global_trx_id = 0;
-		trx->trx_id = ++global_trx_id;
+	trx->trx_id = ++global_trx_id;
     }
 
     trx->next = NULL;
@@ -44,18 +44,17 @@ int trx_commit(int trx_id){
     pthread_mutex_lock(&lock_table_latch);
     pthread_mutex_lock(&trx_table_latch);
     HASH_FIND(hh, trx_table, &l.trx_id, sizeof(int), p);
-
     if (!p) {
-		pthread_mutex_unlock(&lock_table_latch);
-		pthread_mutex_unlock(&trx_table_latch);
-		return 0;
+	pthread_mutex_unlock(&lock_table_latch);
+	pthread_mutex_unlock(&trx_table_latch);
+	return 0;
     }
 
     lock_obj = p->next;
     
     while(lock_obj != NULL){
     	lock_release(lock_obj);
-		lock_obj = lock_obj->trx_next_lock;
+	lock_obj = lock_obj->trx_next_lock;
     }
 
     HASH_DEL(trx_table, p); 
@@ -66,8 +65,8 @@ int trx_commit(int trx_id){
     return trx_id;
 }
 
-/* Abort the transaction. 
- * Rollback all updates performed by this transaction. 
+/* Abort the transaction.
+ * Rollback all updates performed by this transaction.
  */
 void trx_abort(int trx_id){
     trx_t l, *p;
@@ -83,9 +82,9 @@ void trx_abort(int trx_id){
     lock_obj = p->next;
     while(lock_obj != NULL){
     	if (lock_obj->lock_mode == EXCLUSIVE){
-			int ret = update(lock_obj->hash_entry->hash_key.table_id, lock_obj->hash_entry->hash_key.key, lock_obj->old_val, trx_id);
-		}
-		lock_obj = lock_obj->trx_next_lock;
+	    int ret = update(lock_obj->hash_entry->hash_key.table_id, lock_obj->hash_entry->hash_key.key, lock_obj->old_val, trx_id);
+	}
+	lock_obj = lock_obj->trx_next_lock;
     }
 
     trx_commit(trx_id);
