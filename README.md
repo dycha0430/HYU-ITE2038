@@ -14,5 +14,5 @@ Hanyang Univ. 데이터베이스시스템및응용
 # Project5
 [Project5](https://github.com/dycha0430/HYU-ITE2038/wiki/Project5)
 
-#Project6
+# Project6
 [Project6](https://github.com/dycha0430/HYU-ITE2038/wiki/Project6)
