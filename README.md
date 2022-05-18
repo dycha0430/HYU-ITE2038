@@ -20,3 +20,9 @@ Hanyang Univ. 데이터베이스시스템및응용
 # [Project6](https://github.com/dycha0430/HYU-ITE2038/wiki/Project6)
 - Transaction Logging & Three-Pass Recovery 구현 (제대로 동작하지 않음)  
 
+
+# [Final Report](https://github.com/dycha0430/HYU-ITE2038/files/8712808/final_report_final_report.pdf)
+- Overall Layered Architecture. 
+- Concurrency Control Implementation. 
+- Crash-Recovery Implementation. 
+- In-depth Analysis 
