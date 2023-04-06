@@ -117,7 +117,7 @@ int lock_acquire(int table_id, int64_t key, int trx_id,
 		}
 
 		/* If the shared lock of this transaction exists
-		 * and lock to acquire is an exclusive lock,
+		 * and lock to acquire is an exclusive lock and there is no other trx who waits,
 		 * change existing lock from shared to exclusive
 		 * put the existing lock in ret_lock.
 		 */
@@ -146,25 +146,17 @@ int lock_acquire(int table_id, int64_t key, int trx_id,
 				/* If lock to acquire is shared mode and there exists exclusive lock,
 				 * need to wait.
 				 */
-			    if (traverse->lock_mode == EXCLUSIVE && traverse->trx_id != trx_id) {
+			    if (traverse->lock_mode == EXCLUSIVE) {
 			        lock->status = WAITING;
 				break;
 			    }
 			    traverse = traverse->next;
 			}
 		    } else {
-		    	lock->status = ACQUIRED;
-			while(traverse != p->tail){
-				/* If lock to acquire is exclusive mode
-				 * and there exists any lock that is not in this transaction,
-				 * need to wait.
-				 */
-			    if (traverse->trx_id != trx_id){
-			    	lock->status = WAITING;
-				break;
-			    }
-			    traverse = traverse->next;
-			}
+		    	/* If lock to acquire is exclusive mode,
+			 * need to wait.
+			 */
+		    	lock->status = WAITING;
 		    }
 		}
 		
@@ -242,7 +234,7 @@ void lock_wait(lock_t* lock_obj){
 }
 
 /* Remove the lock_obj from the lock list.
- * If there is a successor¡¯s lock waiting for the transaction releasing the lock, wake up the successor.
+ * If there is a successorÂ¡Â¯s lock waiting for the transaction releasing the lock, wake up the successor.
  * If success, return 0. Otherwise, return non-zero value.
  */
 
